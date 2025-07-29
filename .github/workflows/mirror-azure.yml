@@ -6,21 +6,20 @@ permissions:
 # Puedes disparar manualmente o por cron
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '*/60 * * * *'  # cada 60 minutos
 
 jobs:
   mirror:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clonar mirror de Azure DevOps
+      - name: Clonar repo de Azure DevOps (bare)
         run: |
-          git clone --mirror \
+          git clone --bare \
             https://${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/certificacioneslabs/Store%20Intelligence/_git/Store%20Intelligence \
             repo-mirror
-      - name: Empujar mirror a GitHub
+      - name: Empujar ramas y etiquetas a GitHub
         working-directory: repo-mirror
         run: |
           git remote set-url --push origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/gquintal/Portafolio.git
-          git push --mirror
+          git push github --all        # empuja todas las ramas, sin eliminar en GitHub
+          git push github --tags       # empuja todas las etiquetas
