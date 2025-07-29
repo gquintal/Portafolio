@@ -1,25 +1,38 @@
-name: Mirror Azure DevOps → GitHub
+name: Sincronizar Azure DevOps en subcarpeta
 
 permissions:
   contents: write
 
-# Puedes disparar manualmente o por cron
 on:
-  workflow_dispatch:
-
+  workflow_dispatch:          # para ejecución manual
 jobs:
-  mirror:
+  import-subtree:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clonar repo de Azure DevOps (bare)
+      - name: Checkout del repo de GitHub
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar identidad de git
         run: |
-          git clone --bare \
-            https://${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/certificacioneslabs/Store%20Intelligence/_git/Store%20Intelligence \
-            repo-mirror
-      - name: Empujar ramas y etiquetas a GitHub
-        working-directory: repo-mirror
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Añadir remoto de Azure DevOps y fetch
         run: |
-          git remote set-url --push origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/gquintal/Portafolio.git
-          git push github --all        # empuja todas las ramas, sin eliminar en GitHub
-          git push github --tags       # empuja todas las etiquetas
+          git remote add azure \
+            https://x-access-token:${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/certificacioneslabs/Store%20Intelligence/_git/Store%20Intelligence
+          git fetch azure
+
+      - name: Importar o actualizar subtree
+        run: |
+          if [ -d AzureDataFactory ]; then
+            git subtree pull --prefix=AzureDataFactory azure main
+          else
+            git subtree add --prefix=AzureDataFactory azure main
+          fi
+
+      - name: Push de cambios a GitHub
+        run: git push origin HEAD:main
